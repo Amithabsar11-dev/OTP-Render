@@ -130,8 +130,8 @@ app.post("/send-otp", async (req, res) => {
       body: JSON.stringify({
         sms: [
           {
-            message: `Your Saral Bhraman login OTP is ${otp}. Please do not share it with anyone.`,
             to: [`91${phone}`],
+            VAR1: otp   // <-- THIS IS THE FIX
           },
         ],
         sender: "SRLBRM",
@@ -141,7 +141,7 @@ app.post("/send-otp", async (req, res) => {
       }),
     });
 
-    const raw = await response.text(); // raw because Msg91 sometimes returns plain text
+    const raw = await response.text();
     console.log("MSG91 SMS RAW RESPONSE:", raw);
 
     return res.json({ ok: true, provider: raw });
