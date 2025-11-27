@@ -84,34 +84,39 @@ import fetch from "node-fetch";
 const app = express();
 app.use(express.json());
 
+// ==========================
+// SIMPLE OTP MEMORY STORE
+// ==========================
 const otpStore = new Map();
 
-// Save OTP for a phone
 function saveOtp(phone, otp) {
   otpStore.set(phone, { otp, timestamp: Date.now() });
 }
 
-// Verify OTP (5 minute expiry)
-function verifyStoredOtp(phone, otp) {
-  const record = otpStore.get(phone);
-  if (!record) return false;
+function verifyOtpStored(phone, otp) {
+  const entry = otpStore.get(phone);
+  if (!entry) return false;
 
-  const isExpired = Date.now() - record.timestamp > 5 * 60 * 1000; 
-  if (isExpired) {
+  // Expire after 5 minutes
+  if (Date.now() - entry.timestamp > 5 * 60 * 1000) {
     otpStore.delete(phone);
     return false;
   }
 
-  return record.otp === otp;
+  return entry.otp === otp;
 }
 
+// ==========================
+// SEND OTP USING SMS API
+// ==========================
 app.post("/send-otp", async (req, res) => {
   const { phone } = req.body;
 
   if (!phone) {
-    return res.status(400).json({ error: "Phone number is required" });
+    return res.status(400).json({ ok: false, error: "Phone required" });
   }
 
+  // Generate OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   saveOtp(phone, otp);
 
@@ -129,52 +134,54 @@ app.post("/send-otp", async (req, res) => {
             to: [`91${phone}`],
           },
         ],
-        sender: "SRLBRM", 
+        sender: "SRLBRM",
         route: "4",
-        DLT_TE_ID: process.env.MSG91_DLT_TEMPLATE_ID, 
+        template_id: process.env.MSG91_SMS_TEMPLATE_ID,
+        DLT_TE_ID: process.env.MSG91_DLT_TEMPLATE_ID,
       }),
     });
 
-    const data = await response.json();
-    console.log("MSG91 SEND SMS RESPONSE:", data);
+    const raw = await response.text(); // raw because Msg91 sometimes returns plain text
+    console.log("MSG91 SMS RAW RESPONSE:", raw);
 
-
-    return res.json({ ok: true, provider: data });
-  } catch (error) {
-    console.error("Send OTP Error:", error);
-    return res.status(500).json({ ok: false, error: error.message });
+    return res.json({ ok: true, provider: raw });
+  } catch (err) {
+    return res.json({ ok: false, error: err.message });
   }
 });
 
-
+// ==========================
+// VERIFY OTP
+// ==========================
 app.post("/verify-otp", (req, res) => {
   const { phone, otp } = req.body;
 
   if (!phone || !otp) {
-    return res.status(400).json({ verified: false, error: "Phone & OTP required" });
+    return res.json({ verified: false, error: "Phone & OTP required" });
   }
 
-  const isValid = verifyStoredOtp(phone, otp);
+  const valid = verifyOtpStored(phone, otp);
 
-  if (isValid) {
+  if (valid) {
     otpStore.delete(phone);
     return res.json({ verified: true });
-  } else {
-    return res.status(400).json({ verified: false, error: "Invalid or expired OTP" });
   }
+
+  return res.json({ verified: false, error: "Invalid or expired OTP" });
 });
 
 
+// ==========================
 app.get("/get-ip", async (req, res) => {
   try {
-    const response = await fetch("https://api64.ipify.org?format=json");
-    const data = await response.json();
-    res.json({ outbound_ip: data.ip, note: "Add this IP in Msg91 whitelist" });
+    const resp = await fetch("https://api64.ipify.org?format=json");
+    const data = await resp.json();
+    res.json({ outbound_ip: data.ip });
   } catch (err) {
     res.json({ error: err.message });
   }
 });
 
-
+// ==========================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
+app.listen(PORT, () => console.log("Server running on PORT", PORT));
