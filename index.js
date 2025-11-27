@@ -116,7 +116,6 @@ app.post("/send-otp", async (req, res) => {
     return res.status(400).json({ ok: false, error: "Phone required" });
   }
 
-  // Generate OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   saveOtp(phone, otp);
 
@@ -131,7 +130,7 @@ app.post("/send-otp", async (req, res) => {
         sms: [
           {
             to: [`91${phone}`],
-            VAR1: otp   // <-- THIS IS THE FIX
+            param1: otp,
           },
         ],
         sender: "SRLBRM",
@@ -142,7 +141,7 @@ app.post("/send-otp", async (req, res) => {
     });
 
     const raw = await response.text();
-    console.log("MSG91 SMS RAW RESPONSE:", raw);
+    console.log("MSG91 RAW RESPONSE:", raw);
 
     return res.json({ ok: true, provider: raw });
   } catch (err) {
@@ -169,7 +168,6 @@ app.post("/verify-otp", (req, res) => {
 
   return res.json({ verified: false, error: "Invalid or expired OTP" });
 });
-
 
 // ==========================
 app.get("/get-ip", async (req, res) => {
