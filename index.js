@@ -130,7 +130,7 @@ app.post("/send-otp", async (req, res) => {
         sms: [
           {
             to: [`91${phone}`],
-            param1: otp,
+            otp: otp   
           },
         ],
         sender: "SRLBRM",
@@ -148,6 +148,7 @@ app.post("/send-otp", async (req, res) => {
     return res.json({ ok: false, error: err.message });
   }
 });
+
 
 // ==========================
 // VERIFY OTP
