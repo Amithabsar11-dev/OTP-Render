@@ -130,8 +130,9 @@ app.post("/send-otp", async (req, res) => {
         sms: [
           {
             to: [`91${phone}`],
-            message: `Your Saral Bhraman login OTP is ${otp}. Please do not share it with anyone.`,
-            otp: otp
+            otp: otp,
+            var: otp,
+            VAR1: otp,
           },
         ],
         sender: "SRLBRM",
@@ -149,8 +150,6 @@ app.post("/send-otp", async (req, res) => {
     return res.json({ ok: false, error: err.message });
   }
 });
-
-
 
 // ==========================
 // VERIFY OTP
