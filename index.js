@@ -120,34 +120,32 @@ app.post("/send-otp", async (req, res) => {
   saveOtp(phone, otp);
 
   try {
-    const response = await fetch("https://control.msg91.com/api/v5/sms", {
+    const response = await fetch("https://control.msg91.com/api/v5/flow/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         authkey: process.env.MSG91_AUTH_KEY,
+        Accept: "application/json",
       },
       body: JSON.stringify({
-        sms: [
+        template_id: process.env.MSG91_TEMPLATE_ID,
+        sender: "SRLBRM",
+        recipients: [
           {
-            to: [`91${phone}`],
+            mobiles: `91${phone}`,
             otp: otp,
-            var: otp,
-            VAR1: otp,
           },
         ],
-        sender: "SRLBRM",
-        route: "4",
-        template_id: process.env.MSG91_SMS_TEMPLATE_ID,
-        DLT_TE_ID: process.env.MSG91_DLT_TEMPLATE_ID,
       }),
     });
 
-    const raw = await response.text();
-    console.log("MSG91 RAW RESPONSE:", raw);
+    const data = await response.json();
+    console.log("MSG91 FLOW RESPONSE:", data);
 
-    return res.json({ ok: true, provider: raw });
+    res.json({ ok: true, provider: data });
   } catch (err) {
-    return res.json({ ok: false, error: err.message });
+    console.error("Send OTP Error:", err);
+    res.json({ ok: false, error: err.message });
   }
 });
 
